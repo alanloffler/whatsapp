@@ -51,7 +51,7 @@ client.on("qr", async (qr) => {
     let qrc = await new Promise((resolve, reject) => {
       client.once("qr", (qrc) => resolve(qrc));
       setTimeout(() => {
-        reject(new Error("QR event wasn't emitted in 40 seconds."));
+        reject(socket.emit("error", "QR event wasn't emitted in 40 seconds."));
       }, 40000);
     });
     io.emit("qr", qrc);
