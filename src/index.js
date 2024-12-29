@@ -13,7 +13,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: "http://localhost:5173",
-  })
+  }),
 );
 
 client.initialize();
@@ -50,6 +50,9 @@ client.on("qr", async (qr) => {
   if (!isConnected) {
     let qrc = await new Promise((resolve, reject) => {
       client.once("qr", (qrc) => resolve(qrc));
+      setTimeout(() => {
+        reject(new Error("QR event wasn't emitted in 40 seconds."));
+      }, 40000);
     });
     io.emit("qr", qrc);
   }
