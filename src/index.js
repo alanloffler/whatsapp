@@ -46,7 +46,7 @@ io.on("connection", (socket) => {
   }
 });
 
-client.on("qr", async (qr) => {
+client.on("qr", async () => {
   if (!isConnected) {
     try {
       let qrc = await new Promise((resolve, reject) => {
@@ -102,6 +102,7 @@ app.post("/sendMessage", async (req, res) => {
         });
       }
     } catch (error) {
+      console.log(`[ERROR]: ${error}`)
       res.json({
         statusCode: 404,
         message: "Error trying to send message",
