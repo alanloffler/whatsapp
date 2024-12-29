@@ -16,7 +16,7 @@ app.use(
   }),
 );
 
-client.initialize();
+
 
 const httpServer = createServer(app);
 
@@ -48,13 +48,20 @@ io.on("connection", (socket) => {
 
 client.on("qr", async (qr) => {
   if (!isConnected) {
-    let qrc = await new Promise((resolve, reject) => {
-      client.once("qr", (qrc) => resolve(qrc));
-      setTimeout(() => {
-        reject(socket.emit("error", "QR event wasn't emitted in 40 seconds."));
-      }, 40000);
-    });
-    io.emit("qr", qrc);
+    try {
+      let qrc = await new Promise((resolve, reject) => {
+        client.once("qr", (qrc) => resolve(qrc));
+
+        setTimeout(() => {
+          reject(new Error("QR event wasn't emitted in 40 seconds."));
+        }, 40000);
+      });
+
+      io.emit("qr", qrc);
+    } catch (error) {
+      console.log(`[ERROR]: ${error.message}`);
+      io.emit("error", "Failed to retrieve QR code. Please retry.");
+    }
   }
 });
 
@@ -82,7 +89,8 @@ app.post("/sendMessage", async (req, res) => {
       const number_details = await client.getNumberId(phoneId);
 
       if (number_details) {
-        await client.sendMessage(chatId, message);
+        await client.sendMessage(phoneId, message);
+        
         res.json({
           statusCode: 200,
           message: "Mensaje enviado",
@@ -106,6 +114,8 @@ app.post("/sendMessage", async (req, res) => {
     });
   }
 });
+
+client.initialize();
 
 httpServer.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
