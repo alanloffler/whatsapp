@@ -16,8 +16,6 @@ app.use(
   }),
 );
 
-
-
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
@@ -39,6 +37,7 @@ io.on("connection", (socket) => {
       connected: true,
     });
   } else {
+    // TODO: here generate qr if there's no connection
     socket.emit("status", {
       message: "WhatsApp: user disconnected",
       connected: false,
