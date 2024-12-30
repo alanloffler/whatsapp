@@ -6,6 +6,7 @@ import { createServer } from "http";
 
 const PORT = 5000;
 let isConnected = false;
+let cachedQR = null;
 
 const app = express();
 
@@ -25,58 +26,56 @@ const io = new Server(httpServer, {
 });
 
 io.on("connection", (socket) => {
-  console.log("Socket: User connected", socket.id);
+  console.log("[SOCKET]: socket connected", socket.id);
 
   socket.on("disconnect", (reason) => {
-    console.log("Socket: user disconnected", reason);
+    console.log("[SOCKET]: socket disconnected", reason);
   });
 
   if (isConnected) {
     socket.emit("status", {
-      message: "WhatsApp: user connected",
+      message: "[STATUS]: WhatsApp user connected",
       connected: true,
+      data: client.info.me.user,
     });
   } else {
-    // TODO: here generate qr if there's no connection
     socket.emit("status", {
-      message: "WhatsApp: user disconnected",
+      message: "[STATUS]: WhatsApp user disconnected",
       connected: false,
+      data: undefined,
     });
+
+    if (cachedQR) {
+      socket.emit("qr", cachedQR);
+    }
   }
 });
 
-client.on("qr", async () => {
-  if (!isConnected) {
-    try {
-      let qrc = await new Promise((resolve, reject) => {
-        client.once("qr", (qrc) => resolve(qrc));
+client.on("qr", (qr) => {
+  if (!isConnected && !cachedQR) {
+    console.log("[WHATSAPP]: Generating QR code");
 
-        setTimeout(() => {
-          reject(new Error("QR event wasn't emitted in 40 seconds."));
-        }, 40000);
-      });
-
-      io.emit("qr", qrc);
-    } catch (error) {
-      console.log(`[ERROR]: ${error.message}`);
-      io.emit("error", "Failed to retrieve QR code. Please retry.");
-    }
+    cachedQR = qr;
+    io.emit("qr", cachedQR);
   }
 });
 
 client.on("ready", () => {
   isConnected = true;
+  cachedQR = null;
   io.emit("status", {
-    message: "WhatsApp: user connected",
+    message: "[STATUS]: WhatsApp user connected",
     connected: true,
+    data: client.info.me.user,
   });
 });
 
 client.on("disconnected", () => {
   isConnected = false;
   io.emit("status", {
-    message: "WhatsApp: user disconnected, need to reconnect",
+    message: "[STATUS]: WhatsApp user disconnected, need to reconnect",
     connected: false,
+    data: undefined,
   });
 });
 
@@ -85,11 +84,10 @@ app.post("/sendMessage", async (req, res) => {
     try {
       const { phone, message } = req.body;
       const phoneId = phone + "@c.us";
-      const number_details = await client.getNumberId(phoneId);
 
+      const number_details = await client.getNumberId(phoneId);
       if (number_details) {
         await client.sendMessage(phoneId, message);
-        
         res.json({
           statusCode: 200,
           message: "Mensaje enviado",
@@ -101,7 +99,7 @@ app.post("/sendMessage", async (req, res) => {
         });
       }
     } catch (error) {
-      console.log(`[ERROR]: ${error}`)
+      console.log(`[ERROR]: ${error}`);
       res.json({
         statusCode: 404,
         message: "Error trying to send message",
