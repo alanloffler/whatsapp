@@ -29,6 +29,7 @@ io.on("connection", (socket) => {
   console.log("[SOCKET]: socket connected", socket.id);
 
   socket.on("disconnect", (reason) => {
+    cachedQR = null;
     console.log("[SOCKET]: socket disconnected", reason);
   });
 
@@ -82,33 +83,34 @@ client.on("disconnected", () => {
 app.post("/sendMessage", async (req, res) => {
   if (isConnected) {
     try {
+      // throw new Error("Error trying to send message");
+
       const { phone, message } = req.body;
       const phoneId = phone + "@c.us";
 
       const number_details = await client.getNumberId(phoneId);
       if (number_details) {
         await client.sendMessage(phoneId, message);
-        res.json({
+
+        res.status(200).json({
           statusCode: 200,
           message: "Mensaje enviado",
         });
       } else {
-        res.json({
-          statusCode: 404,
-          message: "Error sending message",
-        });
+        throw new Error("Error trying to send message");
       }
     } catch (error) {
       console.log(`[ERROR]: ${error}`);
-      res.json({
-        statusCode: 404,
-        message: "Error trying to send message",
+      res.status(400).json({
+        statusCode: 400,
+        message: error.message,
       });
     }
   } else {
-    res.json({
+    console.log(`[ERROR]: Can't send message without connection`);
+    res.status(404).json({
       statusCode: 404,
-      message: "Error trying to send message, need to reconnect to WhatsApp",
+      message: "Can't send message without connection",
     });
   }
 });
