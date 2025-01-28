@@ -68,7 +68,7 @@ client.on("ready", () => {
   io.emit("status", {
     message: "[STATUS]: WhatsApp user connected",
     connected: true,
-    data: client.info.me.user,
+    data: client.info.wid.user,
   });
 });
 
