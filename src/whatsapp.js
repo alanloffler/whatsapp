@@ -20,6 +20,5 @@ export const client = new Client({
       "--disable-gpu",
       "--disable-notifications",
     ],
-    timeout: 120000,
   },
 });
